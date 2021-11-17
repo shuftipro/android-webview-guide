@@ -5,6 +5,8 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -44,6 +46,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -78,9 +81,7 @@ public class WebViewActivity extends AppCompatActivity {
         initWebView("URL");
 
     }
-
-
-
+    
     @SuppressLint("SetJavaScriptEnabled")
     private void initWebView(String verification_url) {
 
@@ -145,8 +146,6 @@ public class WebViewActivity extends AppCompatActivity {
                             mCameraPhotoPath = "file:" + photoFile.getAbsolutePath();
                             takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,
                                     Uri.fromFile(photoFile));
-                        } else {
-                            takePictureIntent = null;
                         }
                     }
                 } else {
@@ -166,8 +165,6 @@ public class WebViewActivity extends AppCompatActivity {
                             mCameraPhotoPath = "file:" + photoFile.getAbsolutePath();
                             takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,
                                     Uri.fromFile(photoFile));
-                        } else {
-                            takePictureIntent = null;
                         }
                     }
                 }
@@ -291,8 +288,6 @@ public class WebViewActivity extends AppCompatActivity {
         return true;
     }
 
-
-
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -318,6 +313,11 @@ public class WebViewActivity extends AppCompatActivity {
                     if (mCameraPhotoPath != null) {
                         results = new Uri[]{Uri.parse(mCameraPhotoPath)};
                     }
+                    else{
+                        Bitmap photo = (Bitmap) data.getExtras().get("data");
+                        Uri tempUri = getImageUri(getApplicationContext(), photo);
+                        results = new Uri[]{tempUri};
+                    }
                 }
 
             }
@@ -328,6 +328,25 @@ public class WebViewActivity extends AppCompatActivity {
         return;
     }
 
+    public Uri getImageUri(Context inContext, Bitmap inImage) {
+        ContextWrapper cw = new ContextWrapper(getApplicationContext());
+        File directory = cw.getDir("profile", Context.MODE_PRIVATE);
+        if (!directory.exists()) {
+            directory.mkdir();
+        }
+        File mypath = new File(directory, "thumbnail.png");
+
+        FileOutputStream fos = null;
+        try {
+            fos = new FileOutputStream(mypath);
+            inImage.compress(Bitmap.CompressFormat.PNG, 100, fos);
+            fos.close();
+        } catch (Exception e) {
+            Log.e("SAVE_IMAGE", e.getMessage(), e);
+        }
+        return Uri.parse(String.valueOf(mypath.toURI()));
+    }
+    
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
